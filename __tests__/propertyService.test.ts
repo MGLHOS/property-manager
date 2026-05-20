@@ -49,7 +49,7 @@ describe("averageRentByRegion", () => {
   });
 
   it("returns the correct average when there is only one property in the region", () => {
-    expect(averageRentByRegion(properties, "SCOTLAND", "pounds")).toBe(1500);
+    expect(averageRentByRegion(properties, "SCOTLAND", "pence")).toBe(150000);
   });
 
   it("returns 0 when no properties exist in the region", () => {
@@ -60,6 +60,20 @@ describe("averageRentByRegion", () => {
     const result = averageRentByRegion(properties, "ENGLAND");
     expect(typeof result).toBe("number");
     expect(isNaN(result)).toBe(false);
+  });
+
+  it("throws if a property in the region has a negative rent", () => {
+    const property = makeProperty({ monthlyRentPence: -100 });
+    expect(() => averageRentByRegion([property], "ENGLAND")).toThrow(
+      "invalid monthlyRentPence",
+    );
+  });
+
+  it("throws if a property in the region has a NaN rent", () => {
+    const property = makeProperty({ monthlyRentPence: NaN });
+    expect(() => averageRentByRegion([property], "ENGLAND")).toThrow(
+      "invalid monthlyRentPence",
+    );
   });
 
   it("works with real data", () => {
@@ -115,6 +129,42 @@ describe("monthlyRentPerTenant", () => {
     expect(() => monthlyRentPerTenant(property, otherTenants)).toThrow(
       `Property ${property.id} has no tenants`,
     );
+  });
+
+  it("throws if monthlyRentPence is negative", () => {
+    const invalidProperty = makeProperty({ monthlyRentPence: -100 });
+    expect(() => monthlyRentPerTenant(invalidProperty, tenants)).toThrow(
+      "invalid monthlyRentPence",
+    );
+  });
+
+  it("throws if monthlyRentPence is NaN", () => {
+    const invalidProperty = makeProperty({ monthlyRentPence: NaN });
+    expect(() => monthlyRentPerTenant(invalidProperty, tenants)).toThrow(
+      "invalid monthlyRentPence",
+    );
+  });
+
+  it("floors the per-tenant share when rent does not divide evenly", () => {
+    const unevenProperty = makeProperty({ monthlyRentPence: 100 });
+    const threeTenants = [
+      makeTenant({ id: "t_1", propertyId: "p_1000" }),
+      makeTenant({ id: "t_2", propertyId: "p_1000" }),
+      makeTenant({ id: "t_3", propertyId: "p_1000" }),
+    ];
+    expect(monthlyRentPerTenant(unevenProperty, threeTenants, "pence")).toBe(
+      33,
+    );
+  });
+
+  it("returns the exact share when rent divides evenly", () => {
+    const evenProperty = makeProperty({ monthlyRentPence: 90 });
+    const threeTenants = [
+      makeTenant({ id: "t_1", propertyId: "p_1000" }),
+      makeTenant({ id: "t_2", propertyId: "p_1000" }),
+      makeTenant({ id: "t_3", propertyId: "p_1000" }),
+    ];
+    expect(monthlyRentPerTenant(evenProperty, threeTenants, "pence")).toBe(30);
   });
 });
 
@@ -293,14 +343,37 @@ describe("getPropertyStatus", () => {
 
   it("defaults to the current date when none is provided", () => {
     const property = makeProperty({ tenancyEndDate: FUTURE });
-    const result = getPropertyStatus(property, []);
     const validStatuses = [
       "PROPERTY_VACANT",
       "PARTIALLY_VACANT",
       "PROPERTY_ACTIVE",
       "PROPERTY_OVERDUE",
     ];
-    expect(validStatuses).toContain(result);
+    expect(validStatuses).toContain(getPropertyStatus(property, []));
+  });
+
+  it("throws if capacity is zero", () => {
+    const property = makeProperty({ capacity: 0 });
+    expect(() => getPropertyStatus(property, [])).toThrow("invalid capacity");
+  });
+
+  it("throws if capacity is negative", () => {
+    const property = makeProperty({ capacity: -1 });
+    expect(() => getPropertyStatus(property, [])).toThrow("invalid capacity");
+  });
+
+  it("throws if tenancyEndDate is invalid", () => {
+    const property = makeProperty({ tenancyEndDate: "not-a-date" });
+    expect(() => getPropertyStatus(property, [])).toThrow(
+      "invalid tenancyEndDate",
+    );
+  });
+
+  it("throws if property has no id", () => {
+    const property = makeProperty({ id: "" });
+    expect(() => getPropertyStatus(property, [])).toThrow(
+      "Property must have an id",
+    );
   });
 
   it("returns a valid status for every property in real data", () => {
