@@ -36,16 +36,16 @@ describe("averageRentByRegion", () => {
     makeProperty({ id: "p_3", region: "SCOTLAND", monthlyRentPence: 150000 }),
   ];
 
-  it("returns the average rent in pounds by default", () => {
-    expect(averageRentByRegion(properties, "ENGLAND")).toBe(1500);
+  it("returns the average rent in pence by default", () => {
+    expect(averageRentByRegion(properties, "ENGLAND")).toBe(150000);
   });
 
-  it("returns the average rent in pounds when explicitly requested", () => {
-    expect(averageRentByRegion(properties, "ENGLAND", "pounds")).toBe(1500);
-  });
-
-  it("returns the average rent in pence when requested", () => {
+  it("returns the average rent in pence when explicitly requested", () => {
     expect(averageRentByRegion(properties, "ENGLAND", "pence")).toBe(150000);
+  });
+
+  it("returns the average rent in pounds when requested", () => {
+    expect(averageRentByRegion(properties, "ENGLAND", "pounds")).toBe(1500);
   });
 
   it("returns the correct average when there is only one property in the region", () => {

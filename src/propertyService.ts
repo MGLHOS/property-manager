@@ -4,12 +4,12 @@ import { Property, PropertyStatus, Region, RentUnit, Tenant } from "./types";
  * Returns the average monthly rent for all properties in the given region.
  *
  * Returns 0 if no properties exist for the region. The unit parameter controls
- * whether the result is expressed in pence or pounds (defaults to pounds).
+ * whether the result is expressed in pence or pounds (defaults to pence).
  */
 export function averageRentByRegion(
   properties: Property[],
   region: Region,
-  unit: RentUnit = "pounds",
+  unit: RentUnit = "pence",
 ): number {
   const regionProperties = properties.filter((p) => p.region === region);
 

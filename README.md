@@ -22,7 +22,8 @@ npm run build           # compile to dist/
 
 ## API
 
-All functions are pure — they accept data as arguments and have no side effects. Load your data however suits your infrastructure and pass it in.
+All functions are pure — they accept data as arguments and have no side effects.
+Load your data however suits your infrastructure and pass it in.
 
 ### `averageRentByRegion(properties, region, unit?)`
 
@@ -31,8 +32,8 @@ Returns the mean monthly rent for all properties in a given region.
 ```ts
 import { averageRentByRegion } from "./src";
 
-averageRentByRegion(properties, "ENGLAND"); // → 1543.20 (pounds, default)
-averageRentByRegion(properties, "ENGLAND", "pence"); // → 154320
+averageRentByRegion(properties, "ENGLAND"); // → 154320 (pence, default)
+averageRentByRegion(properties, "ENGLAND", "pence"); // → 1543.20
 ```
 
 - `unit` defaults to `"pounds"`. Pass `"pence"` to get the raw integer value.
