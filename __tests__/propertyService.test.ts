@@ -113,7 +113,7 @@ describe("monthlyRentPerTenant", () => {
   it("throws an error when tenants list contains no tenants for this property", () => {
     const otherTenants = [makeTenant({ propertyId: "OTHER_PROPERTY" })];
     expect(() => monthlyRentPerTenant(property, otherTenants)).toThrow(
-      `Property ${property.id} has no tenants`
+      `Property ${property.id} has no tenants`,
     );
   });
 });
@@ -149,30 +149,44 @@ describe("invalidPostcodePropertyIds", () => {
   });
 
   it("handles all valid UK postcode formats", () => {
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "M1 1AE" })])).toEqual(
-      []
-    ); // AN
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "M60 1NW" })])).toEqual(
-      []
-    ); // ANN
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "CR2 6XH" })])).toEqual(
-      []
-    ); // AAN
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "DN55 1PT" })])).toEqual(
-      []
-    ); // AANN
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "W1A 0AX" })])).toEqual(
-      []
-    ); // ANA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "EC1A 1BB" })])).toEqual(
-      []
-    ); // AANA
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "M1 1AE" }),
+      ]),
+    ).toEqual([]); // AN
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "M60 1NW" }),
+      ]),
+    ).toEqual([]); // ANN
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "CR2 6XH" }),
+      ]),
+    ).toEqual([]); // AAN
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "DN55 1PT" }),
+      ]),
+    ).toEqual([]); // AANN
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "W1A 0AX" }),
+      ]),
+    ).toEqual([]); // ANA
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "EC1A 1BB" }),
+      ]),
+    ).toEqual([]); // AANA
   });
 
   it("is case insensitive", () => {
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "sw1a 1aa" })])).toEqual(
-      []
-    );
+    expect(
+      invalidPostcodePropertyIds([
+        makeProperty({ id: "p_1", postcode: "sw1a 1aa" }),
+      ]),
+    ).toEqual([]);
   });
 
   it("returns the correct invalid property IDs from real data", () => {
@@ -201,13 +215,23 @@ describe("getPropertyStatus", () => {
   });
 
   it("returns PARTIALLY_VACANT when tenants exist but are below capacity and tenancy is active", () => {
-    const property = makeProperty({ id: "p_1000", capacity: 3, tenancyEndDate: FUTURE });
+    const property = makeProperty({
+      id: "p_1000",
+      capacity: 3,
+      tenancyEndDate: FUTURE,
+    });
     const tenants = [makeTenant({ propertyId: "p_1000" })];
-    expect(getPropertyStatus(property, tenants, TODAY)).toBe("PARTIALLY_VACANT");
+    expect(getPropertyStatus(property, tenants, TODAY)).toBe(
+      "PARTIALLY_VACANT",
+    );
   });
 
   it("returns PROPERTY_ACTIVE when tenants meet capacity and tenancy is active", () => {
-    const property = makeProperty({ id: "p_1000", capacity: 2, tenancyEndDate: FUTURE });
+    const property = makeProperty({
+      id: "p_1000",
+      capacity: 2,
+      tenancyEndDate: FUTURE,
+    });
     const tenants = [
       makeTenant({ id: "t_1", propertyId: "p_1000" }),
       makeTenant({ id: "t_2", propertyId: "p_1000" }),
@@ -216,7 +240,11 @@ describe("getPropertyStatus", () => {
   });
 
   it("returns PROPERTY_ACTIVE when tenants exceed capacity and tenancy is active", () => {
-    const property = makeProperty({ id: "p_1000", capacity: 1, tenancyEndDate: FUTURE });
+    const property = makeProperty({
+      id: "p_1000",
+      capacity: 1,
+      tenancyEndDate: FUTURE,
+    });
     const tenants = [
       makeTenant({ id: "t_1", propertyId: "p_1000" }),
       makeTenant({ id: "t_2", propertyId: "p_1000" }),
@@ -225,23 +253,41 @@ describe("getPropertyStatus", () => {
   });
 
   it("returns PROPERTY_OVERDUE when the tenancy end date has passed and tenants exist", () => {
-    const property = makeProperty({ id: "p_1000", capacity: 3, tenancyEndDate: PAST });
+    const property = makeProperty({
+      id: "p_1000",
+      capacity: 3,
+      tenancyEndDate: PAST,
+    });
     const tenants = [makeTenant({ propertyId: "p_1000" })];
-    expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_OVERDUE");
+    expect(getPropertyStatus(property, tenants, TODAY)).toBe(
+      "PROPERTY_OVERDUE",
+    );
   });
 
   it("returns PROPERTY_OVERDUE even when fully occupied if the tenancy has expired", () => {
-    const property = makeProperty({ id: "p_1000", capacity: 2, tenancyEndDate: PAST });
+    const property = makeProperty({
+      id: "p_1000",
+      capacity: 2,
+      tenancyEndDate: PAST,
+    });
     const tenants = [
       makeTenant({ id: "t_1", propertyId: "p_1000" }),
       makeTenant({ id: "t_2", propertyId: "p_1000" }),
     ];
-    expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_OVERDUE");
+    expect(getPropertyStatus(property, tenants, TODAY)).toBe(
+      "PROPERTY_OVERDUE",
+    );
   });
 
   it("ignores tenants belonging to other properties", () => {
-    const property = makeProperty({ id: "p_1000", capacity: 3, tenancyEndDate: FUTURE });
-    const tenants = [makeTenant({ id: "t_other", propertyId: "ANOTHER_PROPERTY" })];
+    const property = makeProperty({
+      id: "p_1000",
+      capacity: 3,
+      tenancyEndDate: FUTURE,
+    });
+    const tenants = [
+      makeTenant({ id: "t_other", propertyId: "ANOTHER_PROPERTY" }),
+    ];
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_VACANT");
   });
 
@@ -265,7 +311,9 @@ describe("getPropertyStatus", () => {
       "PROPERTY_OVERDUE",
     ]);
     loadProperties().forEach((p) => {
-      expect(validStatuses.has(getPropertyStatus(p, loadTenants(), TODAY))).toBe(true);
+      expect(
+        validStatuses.has(getPropertyStatus(p, loadTenants(), TODAY)),
+      ).toBe(true);
     });
   });
 });

@@ -9,7 +9,7 @@ import { Property, PropertyStatus, Region, RentUnit, Tenant } from "./types";
 export function averageRentByRegion(
   properties: Property[],
   region: Region,
-  unit: RentUnit = "pounds"
+  unit: RentUnit = "pounds",
 ): number {
   const regionProperties = properties.filter((p) => p.region === region);
 
@@ -17,7 +17,10 @@ export function averageRentByRegion(
     return 0;
   }
 
-  const totalPence = regionProperties.reduce((sum, p) => sum + p.monthlyRentPence, 0);
+  const totalPence = regionProperties.reduce(
+    (sum, p) => sum + p.monthlyRentPence,
+    0,
+  );
   const averagePence = totalPence / regionProperties.length;
 
   return unit === "pounds" ? averagePence / 100 : averagePence;
@@ -35,7 +38,7 @@ export function averageRentByRegion(
 export function monthlyRentPerTenant(
   property: Property,
   tenants: Tenant[],
-  unit: RentUnit = "pence"
+  unit: RentUnit = "pence",
 ): number {
   const propertyTenants = tenants.filter((t) => t.propertyId === property.id);
 
@@ -60,7 +63,9 @@ export function invalidPostcodePropertyIds(properties: Property[]): string[] {
   const UK_POSTCODE_REGEX =
     /^(([A-Z][0-9]{1,2})|([A-Z][A-Z][0-9]{1,2})|([A-Z][0-9][A-Z])|([A-Z][A-Z][0-9][A-Z])|([A-Z][A-Z][0-9]{2}))\s[0-9][A-Z]{2}$/i;
 
-  return properties.filter((p) => !UK_POSTCODE_REGEX.test(p.postcode.trim())).map((p) => p.id);
+  return properties
+    .filter((p) => !UK_POSTCODE_REGEX.test(p.postcode.trim()))
+    .map((p) => p.id);
 }
 
 /**
@@ -77,7 +82,7 @@ export function invalidPostcodePropertyIds(properties: Property[]): string[] {
 export function getPropertyStatus(
   property: Property,
   tenants: Tenant[],
-  today: Date = new Date()
+  today: Date = new Date(),
 ): PropertyStatus {
   const propertyTenants = tenants.filter((t) => t.propertyId === property.id);
 
@@ -86,12 +91,18 @@ export function getPropertyStatus(
   }
 
   const tenancyEndDate = new Date(property.tenancyEndDate);
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayMidnight = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
   const isOverdue = todayMidnight > tenancyEndDate;
 
   if (isOverdue) {
     return "PROPERTY_OVERDUE";
   }
 
-  return propertyTenants.length >= property.capacity ? "PROPERTY_ACTIVE" : "PARTIALLY_VACANT";
+  return propertyTenants.length >= property.capacity
+    ? "PROPERTY_ACTIVE"
+    : "PARTIALLY_VACANT";
 }

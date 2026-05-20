@@ -4,7 +4,10 @@ import { Property, Tenant } from "./types";
 
 const DATA_DIR = join(__dirname, "..", "data");
 
-function parseCsv<T>(filename: string, transform: (row: Record<string, string>) => T): T[] {
+function parseCsv<T>(
+  filename: string,
+  transform: (row: Record<string, string>) => T,
+): T[] {
   const content = readFileSync(join(DATA_DIR, filename), "utf-8");
   const lines = content.trim().split("\n");
   const headers = lines[0].split(",");
