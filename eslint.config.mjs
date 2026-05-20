@@ -7,6 +7,11 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    languageOptions: {
+      parserOptions: {
+        project: "./tsconfig.eslint.json",
+      },
+    },
     ignores: ["dist/", "coverage/", "node_modules/"],
   }
 );
