@@ -1,103 +1,106 @@
 # Property Manager
 
-A TypeScript utility library that satisfies four property management requirements using CSV data files.
+A TypeScript library for property portfolio analytics — calculating rents, validating addresses, and reporting occupancy status across a portfolio of properties and tenants.
 
-## Prerequisites
+## Requirements
 
-- Node.js ≥ 18
-- npm ≥ 9
+- Node.js 24 (LTS) — see `.nvmrc`
+- npm 9+
 
-## Quick start
+## Getting started
 
 ```bash
 npm install
-npm test
+npm test              # run the test suite
+npm run test:coverage   # run tests with full coverage report
+npm run lint            # check for code quality issues
+npm run lint:fix        # auto-fix lint issues where possible
+npm run format          # auto-format all source files
+npm run format:check    # check formatting without making changes
+npm run build         # compile to dist/
 ```
+
+## API
+
+All functions are pure — they accept data as arguments and have no side effects. Load your data however suits your infrastructure and pass it in.
+
+### `averageRentByRegion(properties, region, unit?)`
+
+Returns the mean monthly rent for all properties in a given region.
+
+```ts
+import { averageRentByRegion } from "./src";
+
+averageRentByRegion(properties, "ENGLAND")          // → 1543.20 (pounds, default)
+averageRentByRegion(properties, "ENGLAND", "pence") // → 154320
+```
+
+- `unit` defaults to `"pounds"`. Pass `"pence"` to get the raw integer value.
+- Returns `0` if the region has no properties.
+
+---
+
+### `monthlyRentPerTenant(property, tenants, unit?)`
+
+Returns the monthly rent owed by each tenant at a property, split equally.
+
+```ts
+import { monthlyRentPerTenant } from "./src";
+
+monthlyRentPerTenant(property, tenants)            // → 40000 (pence, default)
+monthlyRentPerTenant(property, tenants, "pounds")  // → 400
+```
+
+- `unit` defaults to `"pence"` to preserve precision when dividing.
+- Throws if the property has no tenants.
+
+---
+
+### `invalidPostcodePropertyIds(properties)`
+
+Returns the IDs of any properties whose postcode doesn't conform to the [UK postcode format](https://en.wikipedia.org/wiki/Postcodes_in_the_United_Kingdom).
+
+```ts
+import { invalidPostcodePropertyIds } from "./src";
+
+invalidPostcodePropertyIds(properties) // → ["p_1025", "p_1080", "p_1100"]
+```
+
+Validates all six Royal Mail outward-code formats (AN, ANN, AAN, AANN, ANA, AANA) followed by the mandatory space and inward code (NAA). Matching is case-insensitive.
+
+---
+
+### `getPropertyStatus(property, tenants, today?)`
+
+Returns the current occupancy status of a property.
+
+```ts
+import { getPropertyStatus } from "./src";
+
+getPropertyStatus(property, tenants) // → "PROPERTY_ACTIVE"
+```
+
+| Status | Condition |
+|---|---|
+| `PROPERTY_VACANT` | No tenants assigned |
+| `PARTIALLY_VACANT` | Has tenants, below capacity, tenancy active |
+| `PROPERTY_ACTIVE` | At or above capacity, tenancy active |
+| `PROPERTY_OVERDUE` | Has tenants but tenancy end date has passed |
+
+The optional `today` parameter overrides the current date — useful in tests to produce deterministic results.
 
 ## Project structure
 
 ```
 property-manager/
-├── data/
-│   ├── properties.csv          # Source data – properties
-│   └── tenants.csv             # Source data – tenants
 ├── src/
-│   ├── types.ts                # Shared type definitions
-│   ├── loader.ts               # CSV parsing utilities
-│   ├── propertyService.ts      # The four requirement functions
-│   └── index.ts                # Public API re-exports
-└── __tests__/
-    └── propertyService.test.ts # Jest test suite (27 tests)
+│   ├── types.ts            # Shared domain types
+│   ├── loader.ts           # CSV parsing
+│   ├── propertyService.ts  # Core business logic
+│   └── index.ts            # Public exports
+├── __tests__/
+│   └── propertyService.test.ts
+└── data/
+    ├── properties.csv
+    └── tenants.csv
 ```
-
-## Requirements
-
-### 1 · Average rent by region (`averageRentByRegion`)
-
-```ts
-averageRentByRegion(properties: Property[], region: Region): number
-```
-
-Accepts a `Region` (`"ENGLAND" | "SCOTLAND" | "WALES" | "N.IRELAND"`) and returns the mean `monthlyRentPence` across all properties in that region. Returns `0` if there are no properties for the region.
-
----
-
-### 2 · Monthly rent per tenant (`monthlyRentPerTenant`)
-
-```ts
-monthlyRentPerTenant(
-  property: Property,
-  tenants: Tenant[],
-  unit?: RentUnit         // "pence" (default) | "pounds"
-): number
-```
-
-Splits the property's total monthly rent equally between its tenants. The unit parameter controls whether the result is returned in pence or pounds. Throws an `Error` if the property has no tenants.
-
----
-
-### 3 · Invalid postcode property IDs (`invalidPostcodePropertyIds`)
-
-```ts
-invalidPostcodePropertyIds(properties: Property[]): string[]
-```
-
-Validates each property's postcode against the [official UK postcode format](https://en.wikipedia.org/wiki/Postcodes_in_the_United_Kingdom) (all six outward-code patterns × mandatory `space` × inward code `NAA`). Returns the IDs of properties with an invalid postcode.
-
-Known invalid postcodes in the supplied dataset:
-
-| Property ID | Postcode | Issue                     |
-|-------------|----------|---------------------------|
-| `p_1025`    | `B15 2T` | Inward code missing digit |
-| `p_1080`    | `46 2ST` | Outward code starts with digits |
-| `p_1100`    | `M60 1W` | Inward code missing second letter |
-
----
-
-### 4 · Property status (`getPropertyStatus`)
-
-```ts
-getPropertyStatus(
-  property: Property,
-  tenants: Tenant[],
-  today?: Date            // defaults to new Date(); injectable for testing
-): PropertyStatus
-```
-
-Returns one of four statuses based on tenant occupancy and the tenancy end date:
-
-| Status               | Condition                                                                                   |
-|----------------------|---------------------------------------------------------------------------------------------|
-| `PROPERTY_VACANT`    | No tenants                                                                                  |
-| `PARTIALLY_VACANT`   | At least one tenant, fewer than `capacity`, and tenancy end date has **not** passed         |
-| `PROPERTY_ACTIVE`    | Tenants fill or exceed `capacity`, and tenancy end date has **not** passed                  |
-| `PROPERTY_OVERDUE`   | At least one tenant, but the tenancy end date **has** passed                                |
-
-The `today` parameter is injectable so tests can exercise all branches without relying on the wall clock.
-
-## Design decisions
-
-- **Pure functions** – all four functions accept data as parameters rather than reading CSV files internally. This keeps them trivially testable and reusable.
-- **Dependency injection for time** – `getPropertyStatus` accepts an optional `today: Date` so tests can control the current date deterministically.
-- **No third-party runtime dependencies** – only Node's built-in `fs` module is used for CSV loading; all business logic has zero runtime dependencies.
-- **Type safety** – strict TypeScript types catch region misspellings and unit typos at compile time.

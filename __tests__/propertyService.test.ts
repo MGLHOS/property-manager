@@ -36,27 +36,34 @@ describe("averageRentByRegion", () => {
     makeProperty({ id: "p_3", region: "SCOTLAND", monthlyRentPence: 150000 }),
   ];
 
-  it("returns the average rent for a given region", () => {
-    expect(averageRentByRegion(properties, "ENGLAND")).toBe(150000);
+  it("returns the average rent in pounds by default", () => {
+    expect(averageRentByRegion(properties, "ENGLAND")).toBe(1500);
+  });
+
+  it("returns the average rent in pounds when explicitly requested", () => {
+    expect(averageRentByRegion(properties, "ENGLAND", "pounds")).toBe(1500);
+  });
+
+  it("returns the average rent in pence when requested", () => {
+    expect(averageRentByRegion(properties, "ENGLAND", "pence")).toBe(150000);
   });
 
   it("returns the correct average when there is only one property in the region", () => {
-    expect(averageRentByRegion(properties, "SCOTLAND")).toBe(150000);
+    expect(averageRentByRegion(properties, "SCOTLAND", "pounds")).toBe(1500);
   });
 
   it("returns 0 when no properties exist in the region", () => {
     expect(averageRentByRegion(properties, "WALES")).toBe(0);
   });
 
-  it("returns a number (not NaN)", () => {
+  it("returns a valid number", () => {
     const result = averageRentByRegion(properties, "ENGLAND");
     expect(typeof result).toBe("number");
     expect(isNaN(result)).toBe(false);
   });
 
   it("works with real data", () => {
-    const realProperties = loadProperties();
-    const result = averageRentByRegion(realProperties, "ENGLAND");
+    const result = averageRentByRegion(loadProperties(), "ENGLAND");
     expect(result).toBeGreaterThan(0);
     expect(typeof result).toBe("number");
   });
@@ -96,7 +103,6 @@ describe("monthlyRentPerTenant", () => {
       makeTenant({ id: "t_2", propertyId: "p_1000" }),
       makeTenant({ id: "t_3", propertyId: "OTHER_PROPERTY" }),
     ];
-    // Only 2 tenants belong to p_1000
     expect(monthlyRentPerTenant(property, mixedTenants, "pence")).toBe(60000);
   });
 
@@ -132,8 +138,8 @@ describe("invalidPostcodePropertyIds", () => {
     const properties = [
       makeProperty({ id: "p_good", postcode: "SW1A 1AA" }),
       makeProperty({ id: "p_bad_1", postcode: "INVALID" }),
-      makeProperty({ id: "p_bad_2", postcode: "46 2ST" }), // from real data
-      makeProperty({ id: "p_bad_3", postcode: "B15 2T" }), // missing inward digit
+      makeProperty({ id: "p_bad_2", postcode: "46 2ST" }),
+      makeProperty({ id: "p_bad_3", postcode: "B15 2T" }),
     ];
     const result = invalidPostcodePropertyIds(properties);
     expect(result).toContain("p_bad_1");
@@ -142,33 +148,38 @@ describe("invalidPostcodePropertyIds", () => {
     expect(result).not.toContain("p_good");
   });
 
-  it("handles postcodes with different valid formats", () => {
-    // AN NAA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "M1 1AE" })])).toEqual([]);
-    // ANN NAA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "M60 1NW" })])).toEqual([]);
-    // AAN NAA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "CR2 6XH" })])).toEqual([]);
-    // AANN NAA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "DN55 1PT" })])).toEqual([]);
-    // ANA NAA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "W1A 0AX" })])).toEqual([]);
-    // AANA NAA
-    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "EC1A 1BB" })])).toEqual([]);
+  it("handles all valid UK postcode formats", () => {
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "M1 1AE" })])).toEqual(
+      []
+    ); // AN
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "M60 1NW" })])).toEqual(
+      []
+    ); // ANN
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "CR2 6XH" })])).toEqual(
+      []
+    ); // AAN
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "DN55 1PT" })])).toEqual(
+      []
+    ); // AANN
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "W1A 0AX" })])).toEqual(
+      []
+    ); // ANA
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "EC1A 1BB" })])).toEqual(
+      []
+    ); // AANA
   });
 
   it("is case insensitive", () => {
-    const properties = [makeProperty({ id: "p_1", postcode: "sw1a 1aa" })];
-    expect(invalidPostcodePropertyIds(properties)).toEqual([]);
+    expect(invalidPostcodePropertyIds([makeProperty({ id: "p_1", postcode: "sw1a 1aa" })])).toEqual(
+      []
+    );
   });
 
-  it("returns invalid IDs from the real dataset", () => {
-    const realProperties = loadProperties();
-    const result = invalidPostcodePropertyIds(realProperties);
-    // We know from the data that p_1025 ("B15 2T"), p_1080 ("46 2ST"), p_1100 ("M60 1W") are invalid
-    expect(result).toContain("p_1025");
-    expect(result).toContain("p_1080");
-    expect(result).toContain("p_1100");
+  it("returns the correct invalid property IDs from real data", () => {
+    const result = invalidPostcodePropertyIds(loadProperties());
+    expect(result).toContain("p_1025"); // "B15 2T"  — inward code missing digit
+    expect(result).toContain("p_1080"); // "46 2ST"  — outward code starts with digits
+    expect(result).toContain("p_1100"); // "M60 1W"  — inward code missing second letter
   });
 });
 
@@ -184,18 +195,18 @@ describe("getPropertyStatus", () => {
     expect(getPropertyStatus(property, [], TODAY)).toBe("PROPERTY_VACANT");
   });
 
-  it("returns PROPERTY_VACANT even if tenancy is overdue and there are no tenants", () => {
+  it("returns PROPERTY_VACANT when there are no tenants even if the tenancy is overdue", () => {
     const property = makeProperty({ capacity: 3, tenancyEndDate: PAST });
     expect(getPropertyStatus(property, [], TODAY)).toBe("PROPERTY_VACANT");
   });
 
-  it("returns PARTIALLY_VACANT when tenants exist but are fewer than capacity and tenancy is active", () => {
+  it("returns PARTIALLY_VACANT when tenants exist but are below capacity and tenancy is active", () => {
     const property = makeProperty({ id: "p_1000", capacity: 3, tenancyEndDate: FUTURE });
     const tenants = [makeTenant({ propertyId: "p_1000" })];
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PARTIALLY_VACANT");
   });
 
-  it("returns PROPERTY_ACTIVE when tenant count meets capacity and tenancy is active", () => {
+  it("returns PROPERTY_ACTIVE when tenants meet capacity and tenancy is active", () => {
     const property = makeProperty({ id: "p_1000", capacity: 2, tenancyEndDate: FUTURE });
     const tenants = [
       makeTenant({ id: "t_1", propertyId: "p_1000" }),
@@ -204,7 +215,7 @@ describe("getPropertyStatus", () => {
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_ACTIVE");
   });
 
-  it("returns PROPERTY_ACTIVE when tenant count exceeds capacity and tenancy is active", () => {
+  it("returns PROPERTY_ACTIVE when tenants exceed capacity and tenancy is active", () => {
     const property = makeProperty({ id: "p_1000", capacity: 1, tenancyEndDate: FUTURE });
     const tenants = [
       makeTenant({ id: "t_1", propertyId: "p_1000" }),
@@ -213,13 +224,13 @@ describe("getPropertyStatus", () => {
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_ACTIVE");
   });
 
-  it("returns PROPERTY_OVERDUE when tenancy end date has passed and tenants exist", () => {
+  it("returns PROPERTY_OVERDUE when the tenancy end date has passed and tenants exist", () => {
     const property = makeProperty({ id: "p_1000", capacity: 3, tenancyEndDate: PAST });
     const tenants = [makeTenant({ propertyId: "p_1000" })];
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_OVERDUE");
   });
 
-  it("returns PROPERTY_OVERDUE even when property is at full capacity if tenancy is past", () => {
+  it("returns PROPERTY_OVERDUE even when fully occupied if the tenancy has expired", () => {
     const property = makeProperty({ id: "p_1000", capacity: 2, tenancyEndDate: PAST });
     const tenants = [
       makeTenant({ id: "t_1", propertyId: "p_1000" }),
@@ -228,26 +239,33 @@ describe("getPropertyStatus", () => {
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_OVERDUE");
   });
 
-  it("only counts tenants belonging to the given property", () => {
+  it("ignores tenants belonging to other properties", () => {
     const property = makeProperty({ id: "p_1000", capacity: 3, tenancyEndDate: FUTURE });
-    const tenants = [
-      makeTenant({ id: "t_other", propertyId: "ANOTHER_PROPERTY" }),
-    ];
+    const tenants = [makeTenant({ id: "t_other", propertyId: "ANOTHER_PROPERTY" })];
     expect(getPropertyStatus(property, tenants, TODAY)).toBe("PROPERTY_VACANT");
   });
 
-  it("uses the current date by default (smoke test)", () => {
+  it("defaults to the current date when none is provided", () => {
     const property = makeProperty({ tenancyEndDate: FUTURE });
-    // Should not throw when no date is passed
     const result = getPropertyStatus(property, []);
-    expect(["PROPERTY_VACANT", "PARTIALLY_VACANT", "PROPERTY_ACTIVE", "PROPERTY_OVERDUE"]).toContain(result);
+    const validStatuses = [
+      "PROPERTY_VACANT",
+      "PARTIALLY_VACANT",
+      "PROPERTY_ACTIVE",
+      "PROPERTY_OVERDUE",
+    ];
+    expect(validStatuses).toContain(result);
   });
 
-  it("works with real data", () => {
-    const realProperties = loadProperties();
-    const realTenants = loadTenants();
-    const statuses = realProperties.map((p) => getPropertyStatus(p, realTenants, TODAY));
-    const validStatuses = new Set(["PROPERTY_VACANT", "PARTIALLY_VACANT", "PROPERTY_ACTIVE", "PROPERTY_OVERDUE"]);
-    statuses.forEach((s) => expect(validStatuses.has(s)).toBe(true));
+  it("returns a valid status for every property in real data", () => {
+    const validStatuses = new Set([
+      "PROPERTY_VACANT",
+      "PARTIALLY_VACANT",
+      "PROPERTY_ACTIVE",
+      "PROPERTY_OVERDUE",
+    ]);
+    loadProperties().forEach((p) => {
+      expect(validStatuses.has(getPropertyStatus(p, loadTenants(), TODAY))).toBe(true);
+    });
   });
 });
